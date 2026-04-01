@@ -1,4 +1,3 @@
-
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
@@ -9,8 +8,13 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
-// 🔴 Hardcoded token (as requested)
-const REPLICATE_API_TOKEN = "r8_Q8a3ESeEhpiotoRU5XhwXNYNY46AJ6P2aDRVC";
+// ✅ Use environment variable (set this in Render)
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
+// Root route (health check)
+app.get('/', (req, res) => {
+  res.send('AI Hairstyle API is running');
+});
 
 // Hairstyles
 const hairstyles = [
@@ -56,6 +60,10 @@ app.post('/generate', async (req, res) => {
       return res.status(400).json({ error: 'Missing prompt or image' });
     }
 
+    if (!REPLICATE_API_TOKEN) {
+      return res.status(500).json({ error: 'Missing Replicate API token' });
+    }
+
     const hairColor = color && color !== "Natural" ? `${color} ` : "";
     const fullPrompt = `A professional studio portrait of a person with ${hairColor}${prompt} hairstyle, high quality, realistic, 8k resolution, cinematic lighting`;
 
@@ -70,16 +78,16 @@ app.post('/generate', async (req, res) => {
     let replicateResponse;
     try {
       replicateResponse = await axios.post(
-  'https://api.replicate.com/v1/predictions',
-  {
-    version: "black-forest-labs/flux-2-pro", // realistic vision img2img
-    input: {
-      prompt: fullPrompt,
-      image: formattedImage,
-      strength: 0.75,
-      num_inference_steps: 30
-    }
-  },
+        'https://api.replicate.com/v1/predictions',
+        {
+          version: "black-forest-labs/flux-2-pro",
+          input: {
+            prompt: fullPrompt,
+            image: formattedImage,
+            strength: 0.75,
+            num_inference_steps: 30
+          }
+        },
         {
           headers: {
             'Authorization': `Token ${REPLICATE_API_TOKEN}`,
@@ -150,10 +158,11 @@ app.post('/generate', async (req, res) => {
   }
 });
 
-// Start server
-const PORT = 3000;
+// ✅ Use Render dynamic port
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n==============================`);
+  console.log('\n==============================');
   console.log(`Server running on port ${PORT}`);
-  console.log(`==============================\n`);
+  console.log('==============================\n');
 });
